@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Game Collection Tracker</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(180deg, #0b0f19, #111827);
+      color: white;
+      padding: 30px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 42px;
+    }
+
+    .topbar {
+      max-width: 1100px;
+      margin: 0 auto 30px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .topbar input,
+    .form-grid input {
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: none;
+      font-size: 16px;
+      outline: none;
+    }
+
+    .topbar input {
+      width: 280px;
+    }
+
+    button {
+      padding: 12px 18px;
+      border: none;
+      border-radius: 10px;
+      background: #2563eb;
+      color: white;
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    .games {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 22px;
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 22px;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+      transition: transform 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+    }
+
+    .card h2 {
+      margin-top: 0;
+      margin-bottom: 14px;
+      font-size: 26px;
+      line-height: 1.2;
+    }
+
+    .card p {
+      margin: 8px 0;
+      color: #e5e7eb;
+      font-size: 16px;
+    }
+
+    .button-row {
+      margin-top: 14px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .form-section,
+    .details-section {
+      max-width: 1100px;
+      margin: 0 auto 30px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 16px;
+      padding: 20px;
+    }
+
+    .form-section h2,
+    .details-section h2 {
+      margin-top: 0;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    .message {
+      text-align: center;
+      margin-top: 15px;
+      color: #93c5fd;
+    }
+
+    .details-box {
+      line-height: 1.7;
+      color: #e5e7eb;
+      white-space: pre-line;
+    }
+  </style>
+</head>
+<body>
+  <h1>Game Collection Tracker</h1>
+
+  <div class="topbar">
+    <input type="text" id="searchInput" placeholder="Search by game name..." />
+    <button onclick="filterGames()">Search</button>
+    <button onclick="loadGames()">Reset</button>
+  </div>
+
+  <div class="form-section">
+    <h2>Add New Game</h2>
+    <div class="form-grid">
+      <input type="text" id="gameName" placeholder="Game Name" />
+      <input type="text" id="genre" placeholder="Genre" />
+      <input type="number" id="developerId" placeholder="Developer ID" />
+    </div>
+    <div style="margin-top: 12px;">
+      <button onclick="addGame()">Add Game</button>
+    </div>
+    <div class="message" id="message"></div>
+  </div>
+
+  <div class="details-section">
+    <h2>Game Details</h2>
+    <div class="details-box" id="detailsBox">Click "View Details" on any game card.</div>
+  </div>
+
+  <div class="games" id="games"></div>
+
+  <script>
+    let allGames = [];
+
+    async function loadGames() {
+      const res = await fetch("http://localhost:3000/api/games");
+      const result = await res.json();
+
+      const gamesDiv = document.getElementById("games");
+      gamesDiv.innerHTML = "";
+
+      if (!result.success) {
+        gamesDiv.innerHTML = "<p>Failed to load games.</p>";
+        return;
+      }
+
+      allGames = result.data;
+      renderGames(allGames);
+    }
+
+    function renderGames(games) {
+      const gamesDiv = document.getElementById("games");
+      gamesDiv.innerHTML = "";
+
+      if (games.length === 0) {
+        gamesDiv.innerHTML = "<p>No games found.</p>";
+        return;
+      }
+
+      games.forEach(game => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <h2>${game.game_name}</h2>
+          <p><strong>Genre:</strong> ${game.genre}</p>
+          <p><strong>Developer:</strong> ${game.developer || "N/A"}</p>
+          <p><strong>Game ID:</strong> ${game.game_id}</p>
+          <div class="button-row">
+            <button onclick="viewDetails(${game.game_id})">View Details</button>
+            <button onclick="deleteGame(${game.game_id})">Delete</button>
+          </div>
+        `;
+        gamesDiv.appendChild(card);
+      });
+    }
+
+    function filterGames() {
+      const query = document.getElementById("searchInput").value.toLowerCase().trim();
+      const filtered = allGames.filter(game =>
+        game.game_name.toLowerCase().includes(query)
+      );
+      renderGames(filtered);
+    }
+
+    async function addGame() {
+      const game_name = document.getElementById("gameName").value.trim();
+      const genre = document.getElementById("genre").value.trim();
+      const developer_id = document.getElementById("developerId").value.trim();
+      const message = document.getElementById("message");
+
+      if (!game_name || !genre || !developer_id) {
+        message.textContent = "Please fill all fields.";
+        return;
+      }
+
+      const res = await fetch("http://localhost:3000/api/games", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          game_name,
+          genre,
+          developer_id: Number(developer_id)
+        })
+      });
+
+      const result = await res.json();
+
+      if (result.success) {
+        message.textContent = "Game added successfully.";
+        document.getElementById("gameName").value = "";
+        document.getElementById("genre").value = "";
+        document.getElementById("developerId").value = "";
+        loadGames();
+      } else {
+        message.textContent = result.error || "Failed to add game.";
+      }
+    }
+
+    async function viewDetails(gameId) {
+      const res = await fetch(`http://localhost:3000/api/games/${gameId}`);
+      const result = await res.json();
+
+      const detailsBox = document.getElementById("detailsBox");
+
+      if (!result.success) {
+        detailsBox.textContent = "Could not load game details.";
+        return;
+      }
+
+      const game = result.data;
+
+      const platformText = game.platforms.length
+        ? game.platforms.map(p => p.platform_name).join(", ")
+        : "None";
+
+      const priceText = game.prices.length
+        ? game.prices.map(p => `$${Number(p.amount).toFixed(2)}`).join(", ")
+        : "None";
+
+      const historyText = game.play_history.length
+        ? game.play_history.map(p => `${p.player_name}: ${p.hours_played} hrs`).join("\n")
+        : "No play history";
+
+      detailsBox.textContent =
+`Game Name: ${game.game_name}
+Genre: ${game.genre}
+Developer: ${game.developer || "N/A"}
+Developer ID: ${game.developer_id ?? "N/A"}
+Game ID: ${game.game_id}
+
+Platforms: ${platformText}
+Prices: ${priceText}
+
+Play History:
+${historyText}`;
+    }
+
+    async function deleteGame(gameId) {
+      const ok = confirm("Are you sure you want to delete this game?");
+      if (!ok) return;
+
+      const res = await fetch(`http://localhost:3000/api/games/${gameId}`, {
+        method: "DELETE"
+      });
+
+      const result = await res.json();
+
+      if (result.success) {
+        document.getElementById("detailsBox").textContent = "Game deleted successfully.";
+        loadGames();
+      } else {
+        alert(result.error || "Delete failed.");
+      }
+    }
+
+    loadGames();
+  </script>
+</body>
+</html>
